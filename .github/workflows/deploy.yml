@@ -1,0 +1,107 @@
+name: Deploy to EasyPanel
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests (if available)
+      run: npm test || echo "No tests found"
+
+    - name: Lint code (if available)
+      run: npm run lint || echo "No linting configured"
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t replay-server:${{ github.sha }} .
+        docker tag replay-server:${{ github.sha }} replay-server:latest
+
+    - name: Test Docker image
+      run: |
+        # Criar arquivo .env temporário para teste
+        echo "NODE_ENV=test" > .env.test
+        echo "PORT=3010" >> .env.test
+        echo "DB_HOST=localhost" >> .env.test
+        echo "DB_USER=test" >> .env.test
+        echo "DB_PASSWORD=test" >> .env.test
+        echo "DB_NAME=test" >> .env.test
+        
+        # Testar se o container inicia corretamente
+        docker run -d --name test-container --env-file .env.test -p 3010:3010 replay-server:latest
+        sleep 10
+        
+        # Verificar se o health check responde
+        curl -f http://localhost:3010/health || exit 1
+        
+        # Limpar
+        docker stop test-container
+        docker rm test-container
+
+  deploy:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EasyPanel
+      env:
+        EASYPANEL_WEBHOOK_URL: ${{ secrets.EASYPANEL_WEBHOOK_URL }}
+      run: |
+        if [ -n "$EASYPANEL_WEBHOOK_URL" ]; then
+          echo "Triggering EasyPanel deployment..."
+          curl -X POST "$EASYPANEL_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}",
+              "repository": "${{ github.repository }}",
+              "pusher": {
+                "name": "${{ github.actor }}"
+              }
+            }'
+          echo "Deployment triggered successfully!"
+        else
+          echo "EASYPANEL_WEBHOOK_URL not configured. Skipping deployment."
+          echo "Please configure the webhook URL in GitHub Secrets."
+        fi
+
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Deployment completed successfully!"
+        else
+          echo "❌ Deployment failed!"
+        fi

@@ -1,0 +1,74 @@
+# EasyPanel Configuration for Replay Server
+# Este arquivo configura o deploy automático no EasyPanel
+
+name: replay-server
+image: 
+  # Será construído automaticamente do repositório GitHub
+  source: github
+  repository: seu-usuario/replay-server  # Substitua pelo seu repositório
+  branch: main
+  dockerfile: Dockerfile
+
+# Configurações do serviço
+service:
+  type: app
+  ports:
+    - port: 3010
+      protocol: http
+      public: true
+      domain: replay.replayzone.com.br  # Seu domínio personalizado
+
+# Variáveis de ambiente
+env:
+  NODE_ENV: production
+  PORT: "3010"
+  DB_HOST: db.replayzone.com.br
+  DB_USER: replayzone
+  DB_PASSWORD: Kaio@3005
+  DB_NAME: replayzone
+  DB_CONNECTION_LIMIT: "10"
+  TELEGRAM_ERROR_TOKEN: 7952969691:AAEJsQhzLuX6o6yYbz9lwkCbHvj5VNFrBNU
+  TELEGRAM_SUCCESS_TOKEN: 8043330772:AAF0Rdzx0mjXnpvaDo_yeCoiYu1N7EG5QXA
+  BASE_URL: https://replay.replayzone.com.br
+  SHINOBI_VIDEOS_PATH: /app/data/shinobi
+  FTP_VIDEOS_PATH: /app/data/ftp
+  TEMP_PATH: /app/temp
+  HLS_PATH: /app/hls
+
+# Volumes persistentes
+volumes:
+  - name: shinobi-videos
+    path: /app/data/shinobi
+    size: 50GB  # Ajuste conforme necessário
+  - name: ftp-videos
+    path: /app/data/ftp
+    size: 50GB  # Ajuste conforme necessário
+  - name: temp-files
+    path: /app/temp
+    size: 10GB
+  - name: hls-files
+    path: /app/hls
+    size: 20GB
+
+# Configurações de recursos
+resources:
+  cpu: 1000m      # 1 CPU core
+  memory: 2Gi     # 2GB RAM
+  
+# Health check
+healthcheck:
+  path: /health
+  port: 3010
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Deploy automático
+deploy:
+  strategy: rolling
+  auto_deploy: true  # Deploy automático quando houver push no GitHub
+  
+# Configurações de rede
+network:
+  - type: public
+    port: 3010

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  replay-server:
+    build: .
+    ports:
+      - "3010:3010"
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_CONNECTION_LIMIT=${DB_CONNECTION_LIMIT}
+      - TELEGRAM_ERROR_TOKEN=${TELEGRAM_ERROR_TOKEN}
+      - TELEGRAM_SUCCESS_TOKEN=${TELEGRAM_SUCCESS_TOKEN}
+      - BASE_URL=${BASE_URL}
+    volumes:
+      # Volumes para persistência de dados
+      - ./temp:/app/temp
+      - ./hls:/app/hls
+      # Volumes para vídeos (ajustar conforme seu ambiente)
+      - shinobi_videos:/home/Shinobi/videos
+      - ftp_videos:/home/ftp/videos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3010/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  shinobi_videos:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/Shinobi/videos
+  ftp_videos:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ftp/videos
