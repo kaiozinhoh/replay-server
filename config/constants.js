@@ -14,9 +14,9 @@ module.exports = {
   WAIT_FOR_FINALIZATION: 2000,
   FTP_VIDEOS_PATH: process.env.FTP_VIDEOS_PATH || '/home/ftp/videos',
   DB_CONFIG: {
-    host: process.env.DB_HOST || 'db.replayzone.com.br',
-    port: parseInt(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USER || 'replayzone',
+    host: process.env.DB_HOST || '181.189.64.66',
+    port: parseInt(process.env.DB_PORT) || 3305,
+    user: process.env.DB_USER || 'kaio',
     password: process.env.DB_PASSWORD || 'Kaio@3005',
     database: process.env.DB_NAME || 'replayzone',
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
